@@ -62,17 +62,8 @@ const MainMint = ({ accounts, setAccounts}) => {
                 signer
             );
             try {
-                // Fetch the current mint price from the contract
-                const currentMintPrice = await contract.mintPrice();
-
-                // Convert the mintAmount to BigNumber
-                const mintAmountBN = ethers.BigNumber.from(mintAmount);
-
-                // Calculate the correct value in wei based on the current mint price
-                const mintValue = currentMintPrice.mul(mintAmountBN);
-
-                const response = await contract.mint(mintAmountBN, {
-                    value: mintValue
+                const response = await contract.mint(BigNumber.from(mintAmount), {
+                    value: ethers.utils.parseEther((0.001 * mintAmount).toString())    
                 });
                 console.log('response', response);
             } catch (err) {

@@ -14,6 +14,7 @@ body ,html{
     max-width: 100%;
     min-height: 100vh;
     overflow-x: hidden;
+    overflow-y: auto;
 }
 
 header {
@@ -166,6 +167,75 @@ input::-webkit-inner-spin-button {
 .features .feature p {
     margin-bottom: 20px;
 }
+
+.our-story {
+    background-color: #f8f8f8;
+    padding: 40px 0;
+    text-align: center;
+  }
+  
+  .story-container {
+    width: clamp(300px, 60%, 450px);
+    margin: 250px auto;
+    padding: 20px;
+    border: 2px solid #333;
+    border-radius: 10px;
+    text-align: center;
+  }
+
+  .story-title {
+    font-size: 32px; /* Adjust the font size as needed */
+    margin-bottom: 20px;
+  }
+  
+  .story-content {
+    font-size: 20px; /* Adjust the font size as needed */
+  }
+/* MintSettings.css (or add to styles.css) */
+.MintSettings {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    border: 2px solid #333;
+    border-radius: 10px;
+    text-align: center;
+    background-color: #f8f8f8;
+  }
+  
+  .MintSettings h2 {
+    margin-bottom: 20px;
+  }
+  
+  .MintSettings div {
+    margin-bottom: 15px;
+  }
+  
+  .MintSettings label {
+    font-weight: bold;
+  }
+  
+  .MintSettings input[type="text"],
+  .MintSettings input[type="checkbox"] {
+    padding: 8px;
+    width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-top: 5px;
+  }
+  
+  .MintSettings button {
+    background-color: #333;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .MintSettings button:hover {
+    background-color: #555;
+  }
 
 footer {
     background-color: #333;

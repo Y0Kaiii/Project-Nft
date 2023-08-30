@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from 'react-router-dom';
 import './styles.css';
 
 const NavBar = ({accounts, setAccounts}) => {
@@ -19,9 +20,9 @@ const NavBar = ({accounts, setAccounts}) => {
             <h1>EDENVERDEN</h1>
             </div>
                     <ul className="nav-links">
-                        <li><a href="#">About</a></li>
+                        <li><Link to="/">Mint</Link></li>
                         <li><a href="#">RoadMap</a></li>
-                        <li><a href="#">FAQ</a></li>
+                        <li><Link to="/mint-settings">Mint Settings</Link></li>
         {isConnected ? (
             <p>Connected</p>
         ) : (

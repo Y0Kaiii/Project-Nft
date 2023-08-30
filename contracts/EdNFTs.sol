@@ -15,16 +15,24 @@ contract EdNFTs is ERC721, Ownable {
     mapping(address => uint256) public walletMints;
 
     constructor() payable ERC721('EdNFT', 'EN'){
-        mintPrice = 0.01 ether;
+        mintPrice = 0.001 ether;
         totalSupply = 0;
         maxSupply = 20;
         maxPerWallet = 20;
-        baseTokenUri = 'ipfs://QmePo2QAoGmPDjgftDQ127gdwts7SQ8uL94i4rhUyfTmvk/';
+        baseTokenUri = 'ipfs://QmUP3RgirskSWtJGEEgQpZzNUmjkpayua42H8GbtSxAQ9x/';
         //set withdraw wallet address
     }
 
     function setIsPublicMintEnabled(bool isPublicMintEnabled_) external onlyOwner{
         isPublicMintEnabled = isPublicMintEnabled_;
+    }
+
+    function updateMintPrice(uint256 newMintPrice) external onlyOwner {
+        mintPrice = newMintPrice;
+    }
+
+    function updateMaxSupply(uint256 newMaxSupply) external onlyOwner {
+        maxSupply = newMaxSupply;
     }
 
     function setBaseTokenUri(string calldata baseTokenUri_) external onlyOwner{
