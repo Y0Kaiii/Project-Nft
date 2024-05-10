@@ -1,29 +1,18 @@
 const express = require('express');
+const path = require('path');
+const multer = require('multer');
+const bodyParser = require('body-parser');
 const axios = require('axios');
 const crypto = require('crypto');
-const bodyParser = require('body-parser');
-const qs = require('qs'); // Import the qs library to stringify the data
-const url = require('url');
-const multer = require('multer');
+const qs = require('qs');
+const url = require('url'); // Import the url module
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Set up multer storage for profile picture uploads
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-      cb(null, 'uploads/') // save uploaded files to uploads directory
-    },
-    filename: function (req, file, cb) {
-      cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname)) // append timestamp to filename to avoid conflicts
-    }
-  });
-  
-  // Initialize multer upload
-  const upload = multer({ storage: storage });
-  
-
-app.use(bodyParser.json());
+// Serve static files from public folder
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(bodyParser.urlencoded({ extended: false }));
 
 // OAuth configuration for Twitter
 const twitterConfig = {
@@ -64,10 +53,8 @@ function generateOAuthSignature(httpMethod, baseURL, parameters, consumerSecret,
     return signature;
 }
 
-
 // Route to initiate the OAuth flow and obtain request token
 app.get('/auth/twitter', (req, res) => {
-    // Construct OAuth parameters
     const oauthParams = {
         oauth_callback: encodeURIComponent(twitterConfig.callbackUri),
         oauth_consumer_key: twitterConfig.consumerKey,
@@ -77,10 +64,8 @@ app.get('/auth/twitter', (req, res) => {
         oauth_version: '1.0'
     };
 
-    // Sign the request
     oauthParams.oauth_signature = generateOAuthSignature('POST', 'https://api.twitter.com/oauth/request_token', oauthParams, twitterConfig.consumerSecret);
 
-    // Send the request
     axios.post('https://api.twitter.com/oauth/request_token', null, {
         params: oauthParams,
         headers: {
@@ -99,7 +84,6 @@ app.get('/auth/twitter', (req, res) => {
             throw new Error('OAuth callback not confirmed');
         }
 
-        // Redirect user to Twitter for authorization
         const redirectUrl = `https://api.twitter.com/oauth/authenticate?oauth_token=${parsedData.oauth_token}`;
         res.redirect(redirectUrl);
     })
@@ -113,39 +97,30 @@ app.get('/auth/callback/twitter', async (req, res) => {
     try {
         const { oauth_token, oauth_verifier } = req.query;
 
-        // Prepare data for the POST request to exchange request token for access token
         const data = {
             oauth_verifier,
             oauth_token
         };
 
-        // Stringify the data
         const postData = qs.stringify(data);
 
-        // Make a POST request to Twitter's /oauth/access_token endpoint
         const response = await axios.post('https://api.twitter.com/oauth/access_token', postData, {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
         });
 
-        // Extract oauth_token and oauth_token_secret from the response
         const { oauth_token: accessToken, oauth_token_secret: accessTokenSecret } = qs.parse(response.data);
 
-        // Now you have the access token and access token secret
-        // You can store these tokens for future use
         const verifyCredentialsResponse = await axios.get('https://api.twitter.com/1.1/account/verify_credentials.json', {
             headers: {
                 Authorization: `Bearer ${accessToken}`
             }
         });
 
-        // Extract user's email from the response
         const userName = verifyCredentialsResponse.data.screen_name;
 
-
-        // Redirect the user to the desired page after successful authentication
-        res.redirect(`http://localhost:3000/auth/callback/twitter/?name=${userName}`); // Replace '/dashboard' with your desired URL
+        res.redirect(`http://localhost:3000/auth/callback/twitter/?name=${userName}`);
     } catch (error) {
         console.error('Error handling Twitter OAuth callback:', error);
         return res.status(500).json({ error: 'Internal server error' });
@@ -176,7 +151,7 @@ app.get('/api/auth/discord/redirect', async (req, res) => {
 
             const userinfo = await axios.get('https://discord.com/api/v10/users/@me', {
                 headers: {
-                    'Authorization': Bearer `${access}`,
+                    'Authorization': `Bearer ${access}`, // Fix syntax error here
                 },
             });
 
@@ -185,10 +160,81 @@ app.get('/api/auth/discord/redirect', async (req, res) => {
     }
 });
 
+// Placeholder project data (replace with database or API integration)
+const projectData = {
+    name: "",
+    description: "",
+    platform: "",
+    socialLink: "",
+    websiteLink: "",
+    marketplaceLink: "",
+    releaseDate: "",
+    picture: "", // Path to project picture
+    videos: [], // Array to store video information (name, path)
+};
 
+// Configure Multer for video uploads
+const upload = multer({
+    dest: 'uploads/',
+    limits: { fileSize: 30000000 },
+    fileFilter: (req, file, cb) => {
+        const allowedExtensions = ['.mp4', '.mov', '.avi'];
+        const extname = path.extname(file.originalname);
+        if (allowedExtensions.includes(extname)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only video files allowed'));
+        }
+    }
+});
+
+// Route to handle video uploads (replace with authorization checks)
+app.post('/upload-video', upload.single('video'), (req, res) => {
+    if (req.file && projectData.videos.length < 3) {
+        projectData.videos.push({ name: req.file.originalname, path: req.file.path });
+        res.json({ message: 'Video uploaded successfully!' });
+    } else if (req.file && projectData.videos.length >= 3) {
+        res.status(400).json({ message: 'Maximum 3 videos allowed!' });
+    } else {
+        res.status(400).json({ message: 'Error uploading video' });
+    }
+});
+
+// Route to handle project data updates (replace with validation)
+app.post('/update-project', bodyParser.urlencoded(), (req, res) => {
+    projectData.name = req.body.name;
+    projectData.description = req.body.description;
+    projectData.platform = req.body.platform;
+    projectData.socialLink = req.body.socialLink;
+    projectData.websiteLink = req.body.websiteLink;
+    projectData.marketplaceLink = req.body.marketplaceLink;
+    projectData.releaseDate = req.body.releaseDate;
+    projectData.picture = req.body.picture;
+    res.json({ message: 'Project details updated!' });
+});
+
+// Route to render project details page
 app.get('/', (req, res) => {
-    res.send('Hello, world!'); // Or render your app page here
-  });
+    res.sendFile(path.join(__dirname, 'public/index.html'));
+});
+
+// Sample data for searching (replace with your data source)
+const projects = [
+    { name: "Project Alpha", description: "This is project alpha" },
+    { name: "Project Beta", description: "This is project beta" },
+    { name: "Project Gamma", description: "This is project gamma" },
+];
+
+app.get('/search', (req, res) => {
+    const searchTerm = req.query.term;
+
+    const filteredProjects = projects.filter(project =>
+        project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        project.description.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    res.json(filteredProjects);
+});
 
 // Dummy database to store user data
 const users = {};
