@@ -14,6 +14,7 @@ import NFTListings from './NFTListings';
 import CollectionCarousel from './CollectionCarolsel';
 import CitiesIntro from './CitiesIntro';
 import MisterTelThai from './MisterTelThai';
+import Logs from './Logs';
 
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
             <Routes>
             <Route path="/" element={<MainMint accounts={accounts} setAccounts={setAccounts} />} />
             <Route path="/mint-settings" element={<MintSettings />} />
+            <Route path="/logs" element={<Logs />} />
             </Routes>
             <CollectionCarousel/>
             <OurStory/>

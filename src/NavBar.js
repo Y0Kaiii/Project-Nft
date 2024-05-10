@@ -45,7 +45,7 @@ const NavBar = ({accounts, setAccounts}) => {
             </div>
                     <ul className="nav-links">
                         <li><Link to="/">Mint</Link></li>
-                        <li><a href="#">RoadMap</a></li>                        
+                        <li><Link to="/logs">Logs</Link></li>                     
                         <li><Link to="/mint-settings">Mint Settings</Link></li>
         {isConnected ? (
             <li><button className="connected-button">'</button></li>
