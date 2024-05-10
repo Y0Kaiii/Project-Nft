@@ -1,9 +1,13 @@
 import React from "react";
+import FooterLogo from './assets/images/FooterLogo.png'
 
 const footer = () => {
   return (
-    <footer>
-      <p>&copy; 2023 EDENVERDEN.</p>
+    <footer className="footer-container">
+      <div className="logo-container">
+      <img src={FooterLogo} alt="footlogo" />
+      </div>
+      &copy; 2023 EDENVERDEN.
     </footer>
   );
 };

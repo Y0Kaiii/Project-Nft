@@ -6,12 +6,14 @@ import edNFTsAddress from './EdNFTs-address.json'
 import './styles.css';
 
 
-
 function MintSettings() {
   const [newMintPrice, setNewMintPrice] = useState('');
   const [newMaxSupply, setNewMaxSupply] = useState('');
   const [newPublicMint, setNewPublicMint] = useState(false);
   const [newBaseTokenURI, setNewBaseTokenURI] = useState('');
+  //const [uploadStatus, setUploadStatus] = useState('');
+  //const [metadataFolderHash, setMetadataFolderHash] = useState('');
+  
 
   async function handleUpdateMintPrice() {
     if (window.ethereum) {
@@ -72,7 +74,7 @@ function MintSettings() {
     }
   }
 
-
+  
 
   return (
     <div className="MintSettings">

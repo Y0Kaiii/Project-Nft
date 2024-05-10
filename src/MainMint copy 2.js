@@ -94,34 +94,6 @@ const MainMint = ({ accounts, setAccounts}) => {
             }
           };
 
-        const handleTransferRandomNFT = async () => {
-            if (window.ethereum && isConnected) {
-                const provider = new ethers.providers.Web3Provider(window.ethereum);
-                const signer = provider.getSigner();
-                const contract = new ethers.Contract(
-                    edNFTsAddress.address,
-                    edNFTs.abi,
-                    signer
-                );
-                try {
-                    // Check if the serial number exists in Firestore
-                    const isSerialNumberValid = await checkSerialNumberInFirestore(serialNumber);
-    
-                    if (isSerialNumberValid) {
-                        // Serial number is valid, proceed with transferring random NFT
-                        const response = await contract.transferRandomNFT();
-                        console.log('Transfer Random NFT response:', response);
-                    } else {
-                        // Serial number is not valid, display an error or handle accordingly
-                        console.log('Invalid serial number');
-                        // You can show a message to the user indicating that the serial number is invalid
-                    }
-                } catch (err) {
-                    console.error('Error transferring random NFT:', err);
-                }
-            }
-        };
-
     // Function to check if the serial number exists in Firestore
   const checkSerialNumberInFirestore = async (serialNumber) => {
     try {
@@ -206,7 +178,7 @@ const MainMint = ({ accounts, setAccounts}) => {
             </div>
             {isConnected ? (
                 <div className="main-mint-section">                   
-                    <button className="mint-button" onClick={handleTransferRandomNFT}>Mint Now</button>
+                    <button className="mint-button" onClick={handleMint}>Mint Now</button>
                     {overMintPopup && (
                         <div className="popup-overlay">
                             <div className ="popup-container">

@@ -1,9 +1,27 @@
-import React from "react";
-import { Link } from 'react-router-dom';
+import React, {useEffect, useState} from "react";
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import './styles.css';
+import logo from './assets/images/EdenVerden.png';
+import axios from 'axios';
 
 const NavBar = ({accounts, setAccounts}) => {
     const isConnected = Boolean(accounts[0]);
+    const navigate = useNavigate();
+    const [username, setUsername] = useState('');
+    
+
+    useEffect(() => {
+        const fetchUsername = async () => {
+          try {
+            const response = await axios.get('/api/twitter/users/profile_banner');
+            setUsername(response.data.name);
+          } catch (error) {
+            console.error('Error fetching username:', error);
+          }
+        };
+    
+        fetchUsername();
+      }, []);
 
     async function connectAccount(){
         if (window.ethereum) {
@@ -13,20 +31,26 @@ const NavBar = ({accounts, setAccounts}) => {
             setAccounts(accounts);
         }
     }
+
+    const handleLoginClick = () => {
+        navigate("/login");
+      };
+
     return (
         <header>
         <nav>
             <div className="logo">
-            <h1>EDENVERDEN</h1>
+                <img src={logo} alt="Eden"></img>
+                <h1>EDEN VERDEN</h1>
             </div>
                     <ul className="nav-links">
                         <li><Link to="/">Mint</Link></li>
-                        <li><a href="#">RoadMap</a></li>
+                        <li><a href="#">RoadMap</a></li>                        
                         <li><Link to="/mint-settings">Mint Settings</Link></li>
         {isConnected ? (
-            <p>Connected</p>
+            <li><button className="connected-button">'</button></li>
         ) : (
-            <li><button className="connect-button" onClick={connectAccount}>Connect</button></li>
+            <li><button className="connect-button" onClick={connectAccount}>Connect Wallet</button></li>
         )}
         </ul>
        </nav>
