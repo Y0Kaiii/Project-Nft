@@ -6,6 +6,7 @@ import './styles.css';
 const Logs = () => {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [transactions, setTransactions] = useState([]);
 
     useEffect(() => {
         fetchData();
@@ -14,17 +15,10 @@ const Logs = () => {
     const fetchData = async () => {
         try {
             const response = await axios.get(
-                `https://api-sepolia.etherscan.io/api?module=logs&action=getLogs&address=${address.address}&fromBlock=4191708&toBlock=4936365&page=1&offset=1000&apikey=WTBHPNTRHID146A59J2RUCEDH1SFR6HRBS`
+                `https://api-sepolia.etherscan.io/api?module=account&action=txlist&address=${address.address}&startblock=4929245&endblock=99999999&page=1&offset=10&sort=asc&apikey=WTBHPNTRHID146A59J2RUCEDH1SFR6HRBS`
             );
             const { result } = response.data;
-            const formattedLogs = result.map(log => {
-                const topicsText = log.topics.map(topic => topic.substring(0, 10)); // Convert topics to text
-                return {
-                    ...log,
-                    topicsText: topicsText.join(', ')
-                };
-            });
-            setLogs(formattedLogs);
+            setTransactions(result);
             setLoading(false);
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -33,15 +27,20 @@ const Logs = () => {
 
     return (
         <div>
-            <h2>Ethereum Logs</h2>
+            <h2 style={{ color: 'white' }}>Ethereum Logs</h2>
             {loading ? (
                 <p>Loading...</p>
             ) : (
-                <ul>
-                    {logs.map((log, index) => (
+                <ul style={{ color: 'white' }}>
+                    {transactions.map((tx, index) => (
                         <li key={index}>
-                            <p>Topics: {log.topicsText}</p>
-                            <p>Data: {log.data}</p>
+                            <p>--------------------------</p>
+                            <p>From: {tx.from}</p>
+                            <p>To: {tx.to}</p>
+                            <p>Value: {tx.value}</p>
+                            <p>Gas: {tx.gas}</p>
+                            <p>Block Number: {tx.blockNumber}</p>
+                            <p>Function: {tx.functionName}</p>
                         </li>
                     ))}
                 </ul>

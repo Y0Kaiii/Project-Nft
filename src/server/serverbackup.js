@@ -6,7 +6,6 @@ const axios = require('axios');
 const crypto = require('crypto');
 const qs = require('qs');
 const url = require('url'); // Import the url module
-const Oauth = require('oauth-1.0a');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -38,104 +37,95 @@ function generateNonce(length) {
     return nonce;
 }
 
-const oauth = Oauth({
-    consumer: {
-        key: 'qaEbeQqLNDguW7bLiSlLRL9QD',
-        secret: 'meHBOHkRKt2AxhHmJBa6NF9n3uHcWqZbf6Jm252ebcLDsjVey1'
-    },
-    signature_method: 'HMAC-SHA1',
-    hash_function: (baseString, key) => crypto.createHmac('sha1', key).update(baseString).digest('base64')
-});
+function generateOAuthSignature(httpMethod, baseURL, parameters, consumerSecret, tokenSecret) {
+    const parameterString = Object.keys(parameters)
+        .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(parameters[key])}`)
+        .sort()
+        .join('&');
+
+    const signatureBaseString = `${httpMethod.toUpperCase()}&${encodeURIComponent(baseURL)}&${encodeURIComponent(parameterString)}`;
+    const signingKey = `${encodeURIComponent(consumerSecret)}&${encodeURIComponent(tokenSecret || '')}`;
+
+    const hmac = crypto.createHmac('sha1', signingKey);
+    hmac.update(signatureBaseString);
+    const signature = hmac.digest('base64');
+
+    return signature;
+}
 
 // Route to initiate the OAuth flow and obtain request token
-app.get('/request-token', async (req, res) => {
-    try {
-        const requestTokenURL = 'https://api.twitter.com/oauth/request_token?oauth_callback=oob&x_auth_access_type=write';
-        const authHeader = oauth.toHeader(oauth.authorize({
-            url: requestTokenURL,
-            method: 'POST'
-        }));
-
-        const request = await fetch(requestTokenURL, {
-            method: 'POST',
-            headers: {
-                Authorization: authHeader['Authorization']
-            }
-        });
-
-        const body = await request.text();
-        const oAuthRequestToken = Object.fromEntries(new URLSearchParams(body));
-
-        res.json(oAuthRequestToken);
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Failed to get request token' });
-    }
-});
-
-app.get('/access-token', async (req, res) => {
-    const { oauth_token, oauth_verifier } = req.query;
-
-    try {
-        const url = `https://api.twitter.com/oauth/access_token?oauth_verifier=${oauth_verifier}&oauth_token=${oauth_token}`;
-        const authHeader = oauth.toHeader(oauth.authorize({
-            url,
-            method: 'POST'
-        }));
-
-        const request = await fetch(url, {
-            method: 'POST',
-            headers: {
-                Authorization: authHeader['Authorization']
-            }
-        });
-
-        const body = await request.text();
-        const oAuthAccessToken = Object.fromEntries(new URLSearchParams(body));
-
-        // Save the access token and secret to your database
-        // Example: save to in-memory storage
-        global.accessToken = oAuthAccessToken;
-
-        // Fetch username
-        const username = await fetchUsername(oAuthAccessToken);
-        res.json({ username });
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Failed to get access token' });
-    }
-});
-
-async function fetchUsername({ oauth_token, oauth_token_secret }) {
-    const token = {
-        key: oauth_token,
-        secret: oauth_token_secret
+app.get('/auth/twitter', (req, res) => {
+    const oauthParams = {
+        oauth_callback: encodeURIComponent(twitterConfig.callbackUri),
+        oauth_consumer_key: twitterConfig.consumerKey,
+        oauth_nonce: generateNonce(32),
+        oauth_signature_method: 'HMAC-SHA1',
+        oauth_timestamp: Math.floor(Date.now() / 1000),
+        oauth_version: '1.0'
     };
 
-    const url = 'https://api.twitter.com/1.1/account/verify_credentials.json';
-    const headers = oauth.toHeader(oauth.authorize({
-        url,
-        method: 'GET'
-    }, token));
+    oauthParams.oauth_signature = generateOAuthSignature('POST', 'https://api.twitter.com/oauth/request_token', oauthParams, twitterConfig.consumerSecret);
 
+    axios.post('https://api.twitter.com/oauth/request_token', null, {
+        params: oauthParams,
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+    })
+    .then(response => {
+        const responseData = response.data;
+        const parsedData = responseData.split('&').reduce((acc, current) => {
+            const [key, value] = current.split('=');
+            acc[key] = decodeURIComponent(value);
+            return acc;
+        }, {});
+
+        if (parsedData.oauth_callback_confirmed !== 'true') {
+            throw new Error('OAuth callback not confirmed');
+        }
+
+        const redirectUrl = `https://api.twitter.com/oauth/authenticate?oauth_token=${parsedData.oauth_token}`;
+        res.redirect(redirectUrl);
+    })
+    .catch(error => {
+        console.error('Error obtaining request token:', error.message);
+        res.status(500).json({ error: 'Internal server error' });
+    });
+});
+
+app.get('/auth/callback/twitter', async (req, res) => {
     try {
-        const request = await fetch(url, {
-            method: 'GET',
+        const { oauth_token, oauth_verifier } = req.query;
+
+        const data = {
+            oauth_verifier,
+            oauth_token
+        };
+
+        const postData = qs.stringify(data);
+
+        const response = await axios.post('https://api.twitter.com/oauth/access_token', postData, {
             headers: {
-                Authorization: headers['Authorization'],
-                'user-agent': 'V2UserLookupJS',
-                'content-type': 'application/json',
-                'accept': 'application/json'
+                'Content-Type': 'application/x-www-form-urlencoded'
             }
         });
 
-        const body = await request.json();
-        return body.screen_name; // Or use another property if you want
+        const { oauth_token: accessToken, oauth_token_secret: accessTokenSecret } = qs.parse(response.data);
+
+        const verifyCredentialsResponse = await axios.get('https://api.twitter.com/1.1/account/verify_credentials.json', {
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            }
+        });
+
+        const userName = verifyCredentialsResponse.data.screen_name;
+
+        res.redirect(`http://localhost:3000/auth/callback/twitter/?name=${userName}`);
     } catch (error) {
-        console.error('Error:', error);
-        throw error;
+        console.error('Error handling Twitter OAuth callback:', error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
-}
+});
 
 app.get('/api/auth/discord/redirect', async (req, res) => {
     const { code } = req.query;

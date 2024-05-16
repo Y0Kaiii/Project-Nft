@@ -15,6 +15,7 @@ import CollectionCarousel from './CollectionCarolsel';
 import CitiesIntro from './CitiesIntro';
 import MisterTelThai from './MisterTelThai';
 import Logs from './Logs';
+import Login from './Login';
 
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
             <Route path="/" element={<MainMint accounts={accounts} setAccounts={setAccounts} />} />
             <Route path="/mint-settings" element={<MintSettings />} />
             <Route path="/logs" element={<Logs />} />
+            <Route path="/login" element={<Login />} />
             </Routes>
             <CollectionCarousel/>
             <OurStory/>

@@ -8,6 +8,9 @@ const NavBar = ({accounts, setAccounts}) => {
     const isConnected = Boolean(accounts[0]);
     const navigate = useNavigate();
     const [username, setUsername] = useState('');
+    const [whitePaperUrl, setWhitePaperUrl] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
     
 
     useEffect(() => {
@@ -22,6 +25,23 @@ const NavBar = ({accounts, setAccounts}) => {
     
         fetchUsername();
       }, []);
+
+      useEffect(() => {
+        const fetchWhitePaperUrl = async () => {
+            setLoading(true);
+            try {
+                const response = await axios.get('http://localhost:5000/white-paper-url');
+                if (response.data.url) {
+                    setWhitePaperUrl(response.data.url);
+                }
+            } catch (error) {
+                setError(error.message);
+            }
+            setLoading(false);
+        };
+
+        fetchWhitePaperUrl();
+    }, []);
 
     async function connectAccount(){
         if (window.ethereum) {
@@ -47,6 +67,14 @@ const NavBar = ({accounts, setAccounts}) => {
                         <li><Link to="/">Mint</Link></li>
                         <li><Link to="/logs">Logs</Link></li>                     
                         <li><Link to="/mint-settings">Mint Settings</Link></li>
+                        <li><Link to="/Login">Login</Link></li>
+                        {loading ? (
+                        <li>Loading...</li>
+                    ) : error ? (
+                        <li>Error: {error}</li>
+                    ) : (
+                        whitePaperUrl && <li><a href={whitePaperUrl}>White Paper</a></li>
+                    )}
         {isConnected ? (
             <li><button className="connected-button">'</button></li>
         ) : (
