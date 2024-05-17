@@ -7,41 +7,24 @@ const crypto = require('crypto');
 const qs = require('qs');
 const url = require('url'); // Import the url module
 const Oauth = require('oauth-1.0a');
+const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+const CALLBACK_URL = 'http://localhost:5000/callback';
 
 // Serve static files from public folder
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// OAuth configuration for Twitter
-const twitterConfig = {
-    authUrl: 'https://api.twitter.com/oauth/request_token',
-    tokenUrl: 'https://api.twitter.com/oauth/access_token',
-    userProfileUrl: 'https://api.twitter.com/1.1/account/verify_credentials.json',
-    consumerKey: 'qaEbeQqLNDguW7bLiSlLRL9QD',
-    consumerSecret: 'meHBOHkRKt2AxhHmJBa6NF9n3uHcWqZbf6Jm252ebcLDsjVey1',
-    accessToken: '4733512986-M7w2Sg2e3QC4KK4clSj6R9PxZnmcjAMDJo5qbb4',
-    accessTokenSecret: 'urIdB7VehRezN2RWkk8xvHaQPcUyu7SsVh0v3RICcGaCJ',
-    callbackUri: `http://localhost:3000/auth/callback/twitter`,
-    scope: ''
-};
+app.use(cors());
 
-// Function to generate a nonce
-function generateNonce(length) {
-    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let nonce = '';
-    for (let i = 0; i < length; i++) {
-        nonce += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
-    return nonce;
-}
 
 const oauth = Oauth({
     consumer: {
         key: 'qaEbeQqLNDguW7bLiSlLRL9QD',
-        secret: 'meHBOHkRKt2AxhHmJBa6NF9n3uHcWqZbf6Jm252ebcLDsjVey1'
+        secret: 'meHBOHkRKt2AxhHmJBa6NF9n3uHcWqZbf6Jm252ebcLDsjVey1',
     },
     signature_method: 'HMAC-SHA1',
     hash_function: (baseString, key) => crypto.createHmac('sha1', key).update(baseString).digest('base64')
@@ -50,22 +33,23 @@ const oauth = Oauth({
 // Route to initiate the OAuth flow and obtain request token
 app.get('/request-token', async (req, res) => {
     try {
-        const requestTokenURL = 'https://api.twitter.com/oauth/request_token?oauth_callback=oob&x_auth_access_type=write';
+        const requestTokenURL = `https://api.twitter.com/oauth/request_token?oauth_callback=${encodeURIComponent(CALLBACK_URL)}&x_auth_access_type=write`;
         const authHeader = oauth.toHeader(oauth.authorize({
             url: requestTokenURL,
-            method: 'POST'
+            method: 'POST',
         }));
 
-        const request = await fetch(requestTokenURL, {
+        const response = await fetch(requestTokenURL, {
             method: 'POST',
             headers: {
-                Authorization: authHeader['Authorization']
-            }
+                Authorization: authHeader['Authorization'],
+            },
         });
 
-        const body = await request.text();
+        const body = await response.text();
         const oAuthRequestToken = Object.fromEntries(new URLSearchParams(body));
 
+        
         res.json(oAuthRequestToken);
     } catch (error) {
         console.error('Error:', error);
@@ -73,33 +57,32 @@ app.get('/request-token', async (req, res) => {
     }
 });
 
-app.get('/access-token', async (req, res) => {
+app.get('/callback', async (req, res) => {
     const { oauth_token, oauth_verifier } = req.query;
 
     try {
         const url = `https://api.twitter.com/oauth/access_token?oauth_verifier=${oauth_verifier}&oauth_token=${oauth_token}`;
         const authHeader = oauth.toHeader(oauth.authorize({
             url,
-            method: 'POST'
+            method: 'POST',
         }));
 
-        const request = await fetch(url, {
+        const response = await fetch(url, {
             method: 'POST',
             headers: {
-                Authorization: authHeader['Authorization']
-            }
+                Authorization: authHeader['Authorization'],
+            },
         });
 
-        const body = await request.text();
+        const body = await response.text();
         const oAuthAccessToken = Object.fromEntries(new URLSearchParams(body));
 
-        // Save the access token and secret to your database
-        // Example: save to in-memory storage
-        global.accessToken = oAuthAccessToken;
 
         // Fetch username
         const username = await fetchUsername(oAuthAccessToken);
-        res.json({ username });
+
+        // Redirect to your React app with the username
+        res.redirect(`http://localhost:3000/Login?username=${encodeURIComponent(username)}`); // Adjust the redirect URL as needed for your setup
     } catch (error) {
         console.error('Error:', error);
         res.status(500).json({ error: 'Failed to get access token' });
@@ -137,7 +120,13 @@ async function fetchUsername({ oauth_token, oauth_token_secret }) {
     }
 }
 
-app.get('/api/auth/discord/redirect', async (req, res) => {
+app.get('/discord/login', (req, res) => {
+    const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=1234504153712296018&redirect_uri=http://localhost:5000/discord/callback&response_type=code&scope=identify`;
+    res.redirect(discordAuthUrl);
+});
+
+
+app.get('/discord/callback', async (req, res) => {
     const { code } = req.query;
 
     if(code) {
@@ -146,7 +135,7 @@ app.get('/api/auth/discord/redirect', async (req, res) => {
             client_secret: 'TPz8DbmGSWVlUlGHXUJm-wDHc3nKCMFr',
             grant_type: 'authorization_code',
             code: code.toString(),
-            redirect_uri: 'http://localhost:5000/api/auth/discord/redirect',
+            redirect_uri: 'http://localhost:5000/discord/callback',
         });
 
         const output = await axios.post('https://discord.com/api/v10/oauth2/token',
@@ -166,6 +155,8 @@ app.get('/api/auth/discord/redirect', async (req, res) => {
             });
 
             console.log(output.data, userinfo.data);
+            const { username } = userinfo.data;
+            res.redirect(`http://localhost:3000/Login?username=${encodeURIComponent(username)}`);
         }
     }
 });

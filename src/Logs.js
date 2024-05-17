@@ -15,7 +15,7 @@ const Logs = () => {
     const fetchData = async () => {
         try {
             const response = await axios.get(
-                `https://api-sepolia.etherscan.io/api?module=account&action=txlist&address=${address.address}&startblock=4929245&endblock=99999999&page=1&offset=10&sort=asc&apikey=WTBHPNTRHID146A59J2RUCEDH1SFR6HRBS`
+                `https://api-sepolia.etherscan.io/api?module=account&action=txlist&address=${address.address}&startblock=4929245&endblock=99999999&page=1&offset=10&sort=asc&apikey=${process.env.REACT_APP_ETHERSCAN_KEY}`
             );
             const { result } = response.data;
             setTransactions(result);
