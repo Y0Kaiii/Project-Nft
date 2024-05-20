@@ -91,9 +91,9 @@ function MintSettings() {
 
         setUploadMessage(response.data.message);
         if (response.data.url) {
-          console.log('Uploaded white paper URL:', response.data.url);
-          // Do something with the URL, such as displaying it to the user
-      }
+            console.log('Uploaded white paper URL:', response.data.url);
+            // Do something with the URL, such as displaying it to the user
+        }
     } catch (error) {
         setUploadMessage('Error uploading white paper');
         console.error('Error uploading white paper:', error);
@@ -102,7 +102,7 @@ function MintSettings() {
 
 // Function to handle file selection
 const handleFileChange = (event) => {
-  setWhitePaper(event.target.files[0]);
+    setWhitePaper(event.target.files[0]);
 };
 
   

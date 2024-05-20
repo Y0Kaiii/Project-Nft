@@ -11,6 +11,7 @@ const NavBar = ({accounts, setAccounts}) => {
     const [whitePaperUrl, setWhitePaperUrl] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
     
 
     useEffect(() => {
@@ -26,7 +27,19 @@ const NavBar = ({accounts, setAccounts}) => {
         fetchUsername();
       }, []);
 
-      useEffect(() => {
+    useEffect(() => {
+        const checkAuth = async () => {
+          try {
+            const response = await axios.get('http://localhost:5000/protected');
+            setIsAuthenticated(true);
+          } catch (error) {
+            setIsAuthenticated(false);
+          }
+        };
+        checkAuth();
+    }, []);
+
+    useEffect(() => {
         const fetchWhitePaperUrl = async () => {
             setLoading(true);
             try {
@@ -56,6 +69,11 @@ const NavBar = ({accounts, setAccounts}) => {
         navigate("/login");
       };
 
+    const handleLogout = () => {
+        localStorage.removeItem('authToken');
+        setIsAuthenticated(false);
+    };
+
     return (
         <header>
         <nav>
@@ -67,7 +85,11 @@ const NavBar = ({accounts, setAccounts}) => {
                         <li><Link to="/">Mint</Link></li>
                         <li><Link to="/logs">Logs</Link></li>                     
                         <li><Link to="/mint-settings">Mint Settings</Link></li>
+                        {isAuthenticated ? (
+                        <li><button onClick={handleLogout}>Logout</button></li>
+                        ) : (
                         <li><Link to="/Login">Login</Link></li>
+                        )}
                         {loading ? (
                         <li>Loading...</li>
                     ) : error ? (

@@ -8,17 +8,72 @@ const qs = require('qs');
 const url = require('url'); // Import the url module
 const Oauth = require('oauth-1.0a');
 const cors = require('cors');
+const fs = require('fs');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const JWT_SECRET = 'youshallnotpass';
+const admin = require('firebase-admin');
+const serviceAccount = require('./firebase admin/serial-number-62043-firebase-adminsdk-ksceg-06f57859ca.json');
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount) 
+});
+
+const db = admin.firestore();
 
 const CALLBACK_URL = 'http://localhost:5000/callback';
 
 // Serve static files from public folder
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: false }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 app.use(cors());
+
+app.post('/register', async (req, res) => {
+    const { email, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    try {
+      await db.collection('users').doc(email).set({ email, password: hashedPassword });
+      res.json({ message: 'User registered successfully' });
+    } catch (error) {
+      res.status(500).json({ error: 'Registration failed' });
+    }
+  });
+  
+  app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+    const userDoc = await db.collection('users').doc(email).get();
+    if (userDoc.exists && await bcrypt.compare(password, userDoc.data().password)) {
+      const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: '1h' });
+      res.json({ message: 'Login successful', token });
+    } else {
+      res.status(401).json({ message: 'Invalid email or password' });
+    }
+  });
+  
+  const authenticateJWT = (req, res, next) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) {
+          return res.sendStatus(403);
+        }
+        req.user = user;
+        next();
+      });
+    } else {
+      res.sendStatus(401);
+    }
+  };
+  
+  app.get('/protected', authenticateJWT, (req, res) => {
+    res.json({ message: 'Access granted' });
+  });
 
 
 const oauth = Oauth({
@@ -210,13 +265,22 @@ app.post('/upload-video', vidupload, (req, res) => {
     }
 });
 
+let whitePaperUrl = '';
+
+// Ensure the upload directory exists
+const uploadDir = 'uploads/white-papers';
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+
 // Configure Multer for white paper uploads
 const whitePaperStorage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'uploads/white-papers');
+        cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + file.originalname);
+        cb(null, file.originalname);
     }
 });
 
@@ -239,8 +303,17 @@ app.post('/upload-white-paper', uploadWhitePaper, (req, res) => {
     if (req.file) {
         const filePath = req.file.path;
         const fileUrl = `http://localhost:${PORT}/${filePath}`;
-        WhitePaperUrl = fileUrl;
-        res.json({ message: 'White paper uploaded successfully!', url: fileUrl });
+        whitePaperUrl = fileUrl;
+
+        // Save the URL to a file for persistence
+        fs.writeFile('whitePaperUrl.txt', whitePaperUrl, (err) => {
+            if (err) {
+                console.error('Error saving URL to file:', err);
+                res.status(500).json({ message: 'Error saving white paper URL' });
+                return;
+            }
+            res.json({ message: 'White paper uploaded successfully!', url: fileUrl });
+        });
     } else {
         res.status(400).json({ message: 'Error uploading white paper' });
     }
@@ -248,9 +321,12 @@ app.post('/upload-white-paper', uploadWhitePaper, (req, res) => {
 
 // Route to fetch the URL of the uploaded white paper
 app.get('/white-paper-url', (req, res) => {
-    // Retrieve the URL from wherever it's stored (e.g., database or file system
-    res.status(200).json({ url: WhitePaperUrl });
+    if (fs.existsSync('whitePaperUrl.txt')) {
+        whitePaperUrl = fs.readFileSync('whitePaperUrl.txt', 'utf-8');
+    }
+    res.status(200).json({ url: whitePaperUrl });
 });
+
 
 // Route to handle project data updates (replace with validation)
 app.post('/update-project', bodyParser.urlencoded(), (req, res) => {
