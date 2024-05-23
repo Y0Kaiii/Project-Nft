@@ -16,7 +16,7 @@ import CitiesIntro from './CitiesIntro';
 import MisterTelThai from './MisterTelThai';
 import Logs from './Logs';
 import Login from './Login';
-
+import Register from './Register';
 
 function App() {
   const [accounts, setAccounts] = useState([]);
@@ -30,6 +30,8 @@ function App() {
             <Route path="/mint-settings" element={<MintSettings />} />
             <Route path="/logs" element={<Logs />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/protected" element={<ProtectedComponent />} />
             </Routes>
             <CollectionCarousel/>
             <OurStory/>
@@ -45,5 +47,9 @@ function App() {
     </Router>
   );
 }
+
+const ProtectedComponent = () => {
+  return <h1>Protected Route - Access Granted</h1>;
+};
 
 export default App;

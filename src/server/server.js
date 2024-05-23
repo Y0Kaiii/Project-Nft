@@ -10,7 +10,8 @@ const Oauth = require('oauth-1.0a');
 const cors = require('cors');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -28,7 +29,7 @@ const CALLBACK_URL = 'http://localhost:5000/callback';
 
 // Serve static files from public folder
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
@@ -36,7 +37,8 @@ app.use(cors());
 
 app.post('/register', async (req, res) => {
     const { email, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
     try {
       await db.collection('users').doc(email).set({ email, password: hashedPassword });
       res.json({ message: 'User registered successfully' });
@@ -78,8 +80,8 @@ app.post('/register', async (req, res) => {
 
 const oauth = Oauth({
     consumer: {
-        key: 'qaEbeQqLNDguW7bLiSlLRL9QD',
-        secret: 'meHBOHkRKt2AxhHmJBa6NF9n3uHcWqZbf6Jm252ebcLDsjVey1',
+        key: process.env.CONSUMER_KEY,
+        secret: process.env.CONSUMER_SECRET,
     },
     signature_method: 'HMAC-SHA1',
     hash_function: (baseString, key) => crypto.createHmac('sha1', key).update(baseString).digest('base64')
@@ -176,7 +178,7 @@ async function fetchUsername({ oauth_token, oauth_token_secret }) {
 }
 
 app.get('/discord/login', (req, res) => {
-    const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=1234504153712296018&redirect_uri=http://localhost:5000/discord/callback&response_type=code&scope=identify`;
+    const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${process.env.DISCORD_CLIENT_ID}&redirect_uri=http://localhost:5000/discord/callback&response_type=code&scope=identify`;
     res.redirect(discordAuthUrl);
 });
 
@@ -186,8 +188,8 @@ app.get('/discord/callback', async (req, res) => {
 
     if(code) {
         const FormData = new url.URLSearchParams({
-            client_id: '1234504153712296018',
-            client_secret: 'TPz8DbmGSWVlUlGHXUJm-wDHc3nKCMFr',
+            client_id: process.env.DISCORD_CLIENT_ID,
+            client_secret: process.env.DISCORD_CLIENT_SECRET,
             grant_type: 'authorization_code',
             code: code.toString(),
             redirect_uri: 'http://localhost:5000/discord/callback',

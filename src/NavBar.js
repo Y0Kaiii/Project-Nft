@@ -86,9 +86,15 @@ const NavBar = ({accounts, setAccounts}) => {
                         <li><Link to="/logs">Logs</Link></li>                     
                         <li><Link to="/mint-settings">Mint Settings</Link></li>
                         {isAuthenticated ? (
+                        <>
+                        <li><Link to="/protected">Protected</Link></li>
                         <li><button onClick={handleLogout}>Logout</button></li>
+                        </>
                         ) : (
+                        <>
                         <li><Link to="/Login">Login</Link></li>
+                        <li><Link to="/register">Register</Link></li>
+                        </>
                         )}
                         {loading ? (
                         <li>Loading...</li>

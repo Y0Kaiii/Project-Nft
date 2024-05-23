@@ -206,7 +206,7 @@ const MainMint = ({ accounts, setAccounts}) => {
             </div>
             {isConnected ? (
                 <div className="main-mint-section">                   
-                    <button className="mint-button" onClick={handleTransferRandomNFT}>Mint Now</button>
+                    <button className="mint-button" onClick={handleMint}>Mint Now</button>
                     {overMintPopup && (
                         <div className="popup-overlay">
                             <div className ="popup-container">
