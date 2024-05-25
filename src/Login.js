@@ -48,8 +48,12 @@ const Login = () => {
     };
 
      // Function to initiate the Discord login flow
-     const handleDiscordLogin = () => {
+    const handleDiscordLogin = () => {
         window.location.href = 'http://localhost:5000/discord/login';
+    };
+
+    const handleGoogleLogin = () => {
+        window.location.href = 'http://localhost:5000/google/login';
     };
 
     const handleLogin = async () => {
@@ -74,6 +78,7 @@ const Login = () => {
                 <button onClick={handleLogin}>Login</button>
                 <button onClick={handleTwitterLogin}>Login with Twitter</button>
                 <button onClick={handleDiscordLogin}>Login with Discord</button>
+                <button onClick={handleGoogleLogin}>Login with Google</button>
                 {message && <p>{message}</p>}
                 </div>
             )}

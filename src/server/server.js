@@ -11,11 +11,13 @@ const cors = require('cors');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const { OAuth2Client } = require('google-auth-library');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = 'youshallnotpass';
+const client = new OAuth2Client('300734836785-lksdd36jm0lgsiaclb5ldgmv9422d2o6.apps.googleusercontent.com');
 const admin = require('firebase-admin');
 const serviceAccount = require('./firebase admin/serial-number-62043-firebase-adminsdk-ksceg-06f57859ca.json');
 
@@ -26,10 +28,12 @@ admin.initializeApp({
 const db = admin.firestore();
 
 const CALLBACK_URL = 'http://localhost:5000/callback';
+const GOOGLE_REDIRECT_URI = 'http://localhost:5000/google/callback';
 
 // Serve static files from public folder
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json()); // Add this line to parse JSON bodies
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
@@ -37,12 +41,13 @@ app.use(cors());
 
 app.post('/register', async (req, res) => {
     const { email, password } = req.body;
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
     try {
       await db.collection('users').doc(email).set({ email, password: hashedPassword });
       res.json({ message: 'User registered successfully' });
     } catch (error) {
+      console.error('Error during registration:', error); // Log the error
       res.status(500).json({ error: 'Registration failed' });
     }
   });
@@ -77,6 +82,43 @@ app.post('/register', async (req, res) => {
     res.json({ message: 'Access granted' });
   });
 
+  app.get('/google/login', (req, res) => {
+    const redirectUrl = client.generateAuthUrl({
+        access_type: 'offline',
+        scope: ['profile', 'email'],
+        redirect_uri: GOOGLE_REDIRECT_URI,
+    });
+    res.redirect(redirectUrl);
+});
+
+app.get('/google/callback', async (req, res) => {
+    const { code } = req.query;
+    try {
+        const { tokens } = await client.getToken({
+            code,
+            redirect_uri: GOOGLE_REDIRECT_URI,
+        });
+        const ticket = await client.verifyIdToken({
+            idToken: tokens.id_token,
+            audience: '300734836785-lksdd36jm0lgsiaclb5ldgmv9422d2o6.apps.googleusercontent.com',
+        });
+        const payload = ticket.getPayload();
+
+        const user = {
+            user_external_id: payload.sub,
+            user_email: payload.email,
+            profile_name: payload.name,
+            profile_picture: payload.picture,
+            user_type: 'google',
+        };
+
+        // Save user to your database or handle as needed
+        res.redirect(`http://localhost:3000/Login?username=${encodeURIComponent(user.profile_name)}`);
+    } catch (error) {
+        console.error('Error during Google login callback:', error);
+        res.status(500).json({ error: 'Failed to log in user' });
+    }
+});
 
 const oauth = Oauth({
     consumer: {
