@@ -17,6 +17,9 @@ import MisterTelThai from './MisterTelThai';
 import Logs from './Logs';
 import Login from './Login';
 import Register from './Register';
+import Profile from './Profile';
+import SecondMint from './SecondMint';
+import NFTUpload from './NFTUpload';
 
 function App() {
   const [accounts, setAccounts] = useState([]);
@@ -28,19 +31,16 @@ function App() {
             <Routes>
             <Route path="/" element={<MainMint accounts={accounts} setAccounts={setAccounts} />} />
             <Route path="/mint-settings" element={<MintSettings />} />
+            <Route path="/NFTUpload" element={<NFTUpload />} />
             <Route path="/logs" element={<Logs />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/protected" element={<ProtectedComponent />} />
+            <Route path="/profile" element={<Profile />} />
             </Routes>
-            <CollectionCarousel/>
+            <SecondMint accounts={accounts} setAccounts={setAccounts}/>
             <OurStory/>
             <NFTListings/>    
-            <CitiesIntro/>   
-            <MisterTelThai/> 
-            <FAQ/>
-            <Followus/>
-            <Footer/>             
           </div>
         <div className='moving-background'></div>
       </div>

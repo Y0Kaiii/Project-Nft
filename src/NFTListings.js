@@ -41,7 +41,7 @@ const NFTListings = () => {
   }, []); // The empty dependency array ensures that this effect runs once when the component mounts
 
   return (
-    <section>
+    <section className='nft-listings-cover'>
     <div className="nft-listings-container">
       <h2>Explore recently Listed</h2>
       <ul className="nft-list">
@@ -68,9 +68,7 @@ const NFTListings = () => {
       </ul>
     </div>
     <div className='NFT-view-container'>
-    <div className='NFT-divider'></div>
-    <a href="https://google.com">View more</a>
-    <div className='NFT-divider'></div>
+    <button className='NFT-view-more' onClick={() => window.open("https://testnets.opensea.io/collection/ednft-5", "_blank")}>View more</button>
     </div>
     </section>
   );

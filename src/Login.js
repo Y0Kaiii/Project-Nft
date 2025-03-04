@@ -30,32 +30,6 @@ const Login = () => {
         }
     }, [query]);
 
-    // Function to initiate the Twitter login flow
-    const handleTwitterLogin = async () => {
-        try {
-            // Request a token from the backend
-            const response = await axios.get('http://localhost:5000/request-token');
-            const { oauth_token } = response.data;
-
-            console.log('OAuth Token:', oauth_token); // Debug log
-
-            // Redirect user to Twitter for authentication
-            const twitterAuthUrl = `https://api.twitter.com/oauth/authenticate?oauth_token=${oauth_token}`;
-            window.location.href = twitterAuthUrl;
-        } catch (error) {
-            console.error('Error initiating login with Twitter:', error);
-        }
-    };
-
-     // Function to initiate the Discord login flow
-    const handleDiscordLogin = () => {
-        window.location.href = 'http://localhost:5000/discord/login';
-    };
-
-    const handleGoogleLogin = () => {
-        window.location.href = 'http://localhost:5000/google/login';
-    };
-
     const handleLogin = async () => {
         try {
           const response = await axios.post('http://localhost:5000/login', { email, password });
@@ -68,22 +42,35 @@ const Login = () => {
 
     return (
         <div>
-            {username ? (
-                <h1>Welcome, {username}!</h1>
-            ) : (
-                <div>
-                <h1>Login</h1>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
-                <button onClick={handleLogin}>Login</button>
-                <button onClick={handleTwitterLogin}>Login with Twitter</button>
-                <button onClick={handleDiscordLogin}>Login with Discord</button>
-                <button onClick={handleGoogleLogin}>Login with Google</button>
-                {message && <p>{message}</p>}
-                </div>
-            )}
-        </div>
+        {username ? (
+          <h1>Welcome, {username}!</h1>
+        ) : (
+          <div>
+            <h1>Login</h1>
+            <div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+              />
+            </div>
+            <div>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+              />
+            </div>
+            <button onClick={handleLogin}>Login</button>
+            {message && <p>{message}</p>}
+          </div>
+        )}
+      </div>
     );
-};
+  };
+
+
 
 export default Login;

@@ -77,34 +77,14 @@ const NavBar = ({accounts, setAccounts}) => {
     return (
         <header>
         <nav>
-            <div className="logo">
-                <img src={logo} alt="Eden"></img>
-                <h1>EDEN VERDEN</h1>
-            </div>
                     <ul className="nav-links">
                         <li><Link to="/">Mint</Link></li>
                         <li><Link to="/logs">Logs</Link></li>                     
                         <li><Link to="/mint-settings">Mint Settings</Link></li>
-                        {isAuthenticated ? (
-                        <>
-                        <li><Link to="/protected">Protected</Link></li>
-                        <li><button onClick={handleLogout}>Logout</button></li>
-                        </>
-                        ) : (
-                        <>
-                        <li><Link to="/Login">Login</Link></li>
-                        <li><Link to="/register">Register</Link></li>
-                        </>
-                        )}
-                        {loading ? (
-                        <li>Loading...</li>
-                    ) : error ? (
-                        <li>Error: {error}</li>
-                    ) : (
-                        whitePaperUrl && <li><a href={whitePaperUrl}>White Paper</a></li>
-                    )}
+                        <li><Link to="/NFTUpload">NFTUpload</Link></li>
+                        
         {isConnected ? (
-            <li><button className="connected-button">'</button></li>
+            <li><button className="connected-button">Connected</button></li>
         ) : (
             <li><button className="connect-button" onClick={connectAccount}>Connect Wallet</button></li>
         )}

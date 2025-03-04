@@ -12,12 +12,49 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 const { OAuth2Client } = require('google-auth-library');
+const mysql = require('mysql');
 require('dotenv').config();
+
+const awsdb = mysql.createConnection({
+    host:"eden-db.cfewcseg2kwe.ap-southeast-1.rds.amazonaws.com",
+    port:"3306",
+    user:"admin",
+    password:"mypassword",
+    database:"eden",
+    connectTimeout: 60000, // Increase timeout to 60 seconds
+    timeout: 600000,
+});
+
+awsdb.connect((err) => {
+    if (err) {
+        console.error('Error connecting to the database:', err.stack);
+        console.error('Error code:', err.code);
+        console.error('Error fatal:', err.fatal);
+        return;
+    }
+    console.log("Database connected");
+});
+
+// Additional check for handling database disconnection
+awsdb.on('error', (err) => {
+    console.error('Database error:', err);
+    if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+        console.error('Database connection was closed.');
+    } else if (err.code === 'ER_CON_COUNT_ERROR') {
+        console.error('Database has too many connections.');
+    } else if (err.code === 'ECONNREFUSED') {
+        console.error('Database connection was refused.');
+    }
+});
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = 'youshallnotpass';
-const client = new OAuth2Client('300734836785-lksdd36jm0lgsiaclb5ldgmv9422d2o6.apps.googleusercontent.com');
+const GCLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GCLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const GREDIRECT_URI = 'http://localhost:5000/google/callback';
+const oAuth2Client = new OAuth2Client(GCLIENT_ID, GCLIENT_SECRET, GREDIRECT_URI);
+const client = new OAuth2Client('748313570305-4oekils5fl4nhsk4dmkvohhv409kdt74.apps.googleusercontent.com');
 const admin = require('firebase-admin');
 const serviceAccount = require('./firebase admin/serial-number-62043-firebase-adminsdk-ksceg-06f57859ca.json');
 
@@ -41,16 +78,25 @@ app.use(cors());
 
 app.post('/register', async (req, res) => {
     const { email, password } = req.body;
+    const userId = uuidv4();  // Generate a unique UserID
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     try {
-      await db.collection('users').doc(email).set({ email, password: hashedPassword });
-      res.json({ message: 'User registered successfully' });
+        await db.collection('users').doc(email).set({
+            userId,
+            email,
+            password: hashedPassword,
+            name,
+            age,
+            profilePicture: '',
+            walletAddress: ''
+        });
+        res.json({ message: 'User registered successfully' });
     } catch (error) {
-      console.error('Error during registration:', error); // Log the error
-      res.status(500).json({ error: 'Registration failed' });
+        console.error('Error during registration:', error);
+        res.status(500).json({ error: 'Registration failed' });
     }
-  });
+});
   
   app.post('/login', async (req, res) => {
     const { email, password } = req.body;
@@ -83,37 +129,53 @@ app.post('/register', async (req, res) => {
   });
 
   app.get('/google/login', (req, res) => {
-    const redirectUrl = client.generateAuthUrl({
+    const authorizeUrl = oAuth2Client.generateAuthUrl({
         access_type: 'offline',
-        scope: ['profile', 'email'],
-        redirect_uri: GOOGLE_REDIRECT_URI,
+        scope: ['https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/userinfo.email'],
     });
-    res.redirect(redirectUrl);
+    res.redirect(authorizeUrl);
 });
 
 app.get('/google/callback', async (req, res) => {
     const { code } = req.query;
-    try {
-        const { tokens } = await client.getToken({
-            code,
-            redirect_uri: GOOGLE_REDIRECT_URI,
-        });
-        const ticket = await client.verifyIdToken({
-            idToken: tokens.id_token,
-            audience: '300734836785-lksdd36jm0lgsiaclb5ldgmv9422d2o6.apps.googleusercontent.com',
-        });
-        const payload = ticket.getPayload();
 
-        const user = {
-            user_external_id: payload.sub,
-            user_email: payload.email,
-            profile_name: payload.name,
-            profile_picture: payload.picture,
-            user_type: 'google',
-        };
+    if (!code) {
+        return res.status(400).send('Authorization code not provided');
+    }
+
+    try {
+        const { tokens } = await oAuth2Client.getToken(code);
+        oAuth2Client.setCredentials(tokens);
+
+        // Fetch user profile
+        const response = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
+            headers: {
+                Authorization: `Bearer ${tokens.access_token}`,
+            },
+        });
+
+        const userData = response.data;
+        const email = userData.email;
+        const userDoc = await db.collection('users').doc(userData.email).get();
+
+        if (!userDoc.exists) {
+            const userId = uuidv4();  // Generate a unique UserID for new Google users
+            await db.collection('users').doc(email).set({
+                userId,
+                email,
+                name: userData.name,
+                age: '',
+                profilePicture: userData.picture,
+                walletAddress: ''
+            });
+        }
+
+        const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: '1h' });
+
+        res.redirect(`http://localhost:3000/profile?token=${token}`);
 
         // Save user to your database or handle as needed
-        res.redirect(`http://localhost:3000/Login?username=${encodeURIComponent(user.profile_name)}`);
+        //res.redirect(`http://localhost:3000/Login?username=${encodeURIComponent(userData.name)}`);
     } catch (error) {
         console.error('Error during Google login callback:', error);
         res.status(500).json({ error: 'Failed to log in user' });
@@ -259,6 +321,38 @@ app.get('/discord/callback', async (req, res) => {
         }
     }
 });
+
+app.post('/update-profile', authenticateJWT, async (req, res) => {
+    const { email } = req.user;
+    const { name, age, profilePicture, walletAddress } = req.body;
+    try {
+        await usersCollection.doc(email).update({
+            name,
+            age,
+            profilePicture,
+            walletAddress
+        });
+        res.json({ message: 'Profile updated successfully' });
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        res.status(500).json({ error: 'Failed to update profile' });
+    }
+});
+
+app.post('/link-wallet', authenticateJWT, async (req, res) => {
+    const { email } = req.user;
+    const { walletAddress } = req.body;
+    try {
+        await usersCollection.doc(email).update({
+            walletAddress
+        });
+        res.json({ message: 'Wallet linked successfully' });
+    } catch (error) {
+        console.error('Error linking wallet:', error);
+        res.status(500).json({ error: 'Failed to link wallet' });
+    }
+});
+
 
 // Placeholder project data (replace with database or API integration)
 const projectData = {

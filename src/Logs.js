@@ -25,9 +25,14 @@ const Logs = () => {
         }
     };
 
+    const convertTimestamp = (timestamp) => {
+        const date = new Date(timestamp * 1000);
+        return date.toLocaleString();
+    };
+
     return (
         <div>
-            <h2 style={{ color: 'white' }}>Ethereum Logs</h2>
+            <h2 style={{ color: 'Black',justifyContent: 'center', alignItems: 'center', display: 'flex' }}>Ethereum Logs</h2>
             {loading ? (
                 <p>Loading...</p>
             ) : (
@@ -37,10 +42,9 @@ const Logs = () => {
                             <p>--------------------------</p>
                             <p>From: {tx.from}</p>
                             <p>To: {tx.to}</p>
+                            <p>Timestamp: {convertTimestamp(tx.timeStamp)}</p>
                             <p>Value: {tx.value}</p>
-                            <p>Gas: {tx.gas}</p>
-                            <p>Block Number: {tx.blockNumber}</p>
-                            <p>Function: {tx.functionName}</p>
+                            <p>Gas: {tx.gas}</p>                      
                         </li>
                     ))}
                 </ul>
